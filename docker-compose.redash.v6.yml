@@ -1,0 +1,130 @@
+version: '2'
+
+
+x-redash-env: &redash-env
+
+x-redash-service: &redash-service
+  image: redash/redash
+  depends_on:
+    - postgres
+    - redis
+  environment: 
+    POSTGRES_PASSWORD: postgres
+    REDASH_DATABASE_URL: postgresql://postgres:postgres@postgres/postgres
+    PYTHONUNBUFFERED: 0 
+    REDASH_LOG_LEVEL: INFO
+    REDASH_REDIS_URL: redis://redis:6379/0
+    REDASH_COOKIE_SECRET: '00fPkU|&M8`BEq3U|0/#(&-*g66d>YUj'
+  restart: always
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.3.0
+    container_name: elasticsearch
+    environment:
+      - cluster.name=vulnwhisperer
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    mem_limit: 8g
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    restart: always
+    networks:
+      esnet:
+        aliases:
+          - elasticsearch.local
+  server:
+    <<: *redash-service
+    command: server
+    environment:
+      REDASH_WEB_WORKERS: 4
+      POSTGRES_PASSWORD: postgres
+      REDASH_DATABASE_URL: postgresql://postgres:postgres@postgres/postgres
+      PYTHONUNBUFFERED: 0 
+      REDASH_LOG_LEVEL: INFO
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: '00fPkU|&M8`BEq3U|0/#(&-*g66d>YUj'
+  scheduler:
+    <<: *redash-service
+    command: scheduler
+    environment:
+      QUEUES: "celery"
+      WORKERS_COUNT: 1
+  scheduled_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      QUEUES: "scheduled_queries,schemas"
+      WORKERS_COUNT: 1
+  adhoc_worker:
+    <<: *redash-service
+    command: worker
+    environment:
+      QUEUES: "queries"
+      WORKERS_COUNT: 2
+  redis:
+    image: redis:5.0-alpine
+    restart: always
+  postgres:
+    image: postgres:9.5-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      REDASH_DATABASE_URL: postgresql://postgres:postgres@postgres/postgres
+      PYTHONUNBUFFERED: 0 
+      REDASH_LOG_LEVEL: INFO
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: '00fPkU|&M8`BEq3U|0/#(&-*g66d>YUj'
+    volumes:
+      - pg-data:/var/lib/postgres/data
+    restart: always
+  nginx:
+    image: redash/nginx:latest
+    ports:
+      - "8888:80"
+    depends_on:
+      - server
+    links:
+      - server:redash
+    restart: always
+  logstash:
+    image: docker.elastic.co/logstash/logstash:6.6.0
+    container_name: logstash
+    volumes:
+      - ./resources/elk6-redash/pipeline/:/usr/share/logstash/pipeline
+      - ./data/:/opt/VulnWhisperer/data
+      #- ./resources/elk6/logstash.yml:/usr/share/logstash/config/logstash.yml
+    environment:
+      - xpack.monitoring.enabled=false
+    depends_on:
+      - elasticsearch
+    networks:
+      esnet:
+        aliases:
+          - logstash.local
+  vulnwhisperer:
+    build: .
+    container_name: vulnwhisperer
+    entrypoint: [
+                  "vuln_whisperer",
+                  "-c",
+                  "/opt/VulnWhisperer/vulnwhisperer.ini"
+    ]    
+    volumes:
+      - ./data/:/opt/VulnWhisperer/data
+      - ./resources/elk6-redash/vulnwhisperer.ini:/opt/VulnWhisperer/vulnwhisperer.ini
+volumes:
+  esdata1:
+    driver: local
+  pg-data:
+    driver: local
+
+networks:
+  esnet:
