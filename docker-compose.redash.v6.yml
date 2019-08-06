@@ -37,10 +37,6 @@ services:
     volumes:
       - esdata1:/usr/share/elasticsearch/data
     restart: always
-    networks:
-      esnet:
-        aliases:
-          - elasticsearch.local
   server:
     <<: *redash-service
     command: server
@@ -105,10 +101,6 @@ services:
       - xpack.monitoring.enabled=false
     depends_on:
       - elasticsearch
-    networks:
-      esnet:
-        aliases:
-          - logstash.local
   vulnwhisperer:
     build: .
     container_name: vulnwhisperer
@@ -125,6 +117,3 @@ volumes:
     driver: local
   pg-data:
     driver: local
-
-networks:
-  esnet:
