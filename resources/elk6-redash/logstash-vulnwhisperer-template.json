@@ -2,7 +2,6 @@
   "index_patterns": "logstash-vulnwhisperer-*",
   "version": 2019041701,
   "mappings": {
-    "doc": {
       "properties": {
         "@timestamp": {
           "type": "date"
@@ -208,6 +207,6 @@
           "type": "keyword"
         }
       }
-    }
+    
   }
 }
