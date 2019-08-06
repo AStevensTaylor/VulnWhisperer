@@ -91,19 +91,15 @@ services:
       - server:redash
     restart: always
   logstash:
-    image: docker.elastic.co/logstash/logstash:6.6.0
-    container_name: logstash
+    image: docker.elastic.co/logstash/logstash-oss:7.3.0
     volumes:
       - ./resources/elk6-redash/pipeline/:/usr/share/logstash/pipeline
       - ./data/:/opt/VulnWhisperer/data
       #- ./resources/elk6/logstash.yml:/usr/share/logstash/config/logstash.yml
-    environment:
-      - xpack.monitoring.enabled=false
     depends_on:
       - elasticsearch
   vulnwhisperer:
     build: .
-    container_name: vulnwhisperer
     entrypoint: [
                   "vuln_whisperer",
                   "-c",
