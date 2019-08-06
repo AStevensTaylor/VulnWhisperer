@@ -59,12 +59,26 @@ services:
     environment:
       QUEUES: "scheduled_queries,schemas"
       WORKERS_COUNT: 1
+      REDASH_WEB_WORKERS: 4
+      POSTGRES_PASSWORD: postgres
+      REDASH_DATABASE_URL: postgresql://postgres:postgres@postgres/postgres
+      PYTHONUNBUFFERED: 0 
+      REDASH_LOG_LEVEL: INFO
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: '00fPkU|&M8`BEq3U|0/#(&-*g66d>YUj'
   adhoc_worker:
     <<: *redash-service
     command: worker
     environment:
       QUEUES: "queries"
       WORKERS_COUNT: 2
+      REDASH_WEB_WORKERS: 4
+      POSTGRES_PASSWORD: postgres
+      REDASH_DATABASE_URL: postgresql://postgres:postgres@postgres/postgres
+      PYTHONUNBUFFERED: 0 
+      REDASH_LOG_LEVEL: INFO
+      REDASH_REDIS_URL: redis://redis:6379/0
+      REDASH_COOKIE_SECRET: '00fPkU|&M8`BEq3U|0/#(&-*g66d>YUj'
   redis:
     image: redis:5.0-alpine
     restart: always
